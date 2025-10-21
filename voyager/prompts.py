@@ -101,12 +101,6 @@ SYSTEM_PROMPT = \
     11) When encountering disclaimers, privacy policies, or similar notices that contain both checkboxes and links, 
         you must prioritize selecting the checkbox element ONLY, and avoid clicking on links. This applies to any 
         input or consent forms requiring acknowledgment or agreement.
-    12) Register with realistic credentials only once. If you’ve already registered, **do not register again**. 
-        When encountering options like "Email", "Password", or any "Login" or "Sign In" text, interpret this as a 
-        login page and attempt to use the credentials you previously registered with.
-    13) When you reach a form that resembles registration again (like fields for name, email, password), 
-        **first look for "Login" or "Sign In" text on the page**. If found, prioritize logging in with previously 
-        used credentials rather than registering again.
     14) Always LOOK at your last action, and try to not replicate that. Do not do the same tasks multiple times in a row.
 
     * Web Browsing Guidelines *
@@ -129,28 +123,4 @@ SYSTEM_PROMPT = \
     Below you will find the actions you have already taken.
     Do not repeat a click,type or submit actions consecutively!!!! This is important always pay attention to this.
     Always try to find what is actually wrong, like a real human would try to solve the problem!
-    """
-
-TASK_PROMPT = """
-    Navigate to the page where we can listen to the closest web-event for financial news or a conference call.
-    Your primary goal is to always find and select the correct and most relevant link for the call, using all available information on the page (labels, text, context).
-    Do not scroll around for context before clicking. Only scroll if you have thoroughly analyzed the visible content and cannot find any relevant link or element for the call.
-    Register with realistic credentials wherever necessary (not John Does, but realistic names and emails). REMEMBER TO DO THIS—IT IS IMPORTANT.
-    Never try to LOGIN first; always try to register first, and then if necessary, login with the same credentials (normally the email from the previous step; look into previous actions to find it).
-    - If you have already completed a registration form, do not fill out a registration form again.
-      On any login or registration page, **look first for a login or sign-in button or link**.
-    - If you encounter fields resembling "name" and "email" but have registered already, look for options like
-      "Login" or "Sign In" before interacting with any registration fields again.
-
-    I need to reach the page where I can see the livestream, video, or audio of the conference call.
-    If you reach a page where the video, audio, or live stream is visible, the navigation was successful—return DONE!
-    If you reach a page where you have no context or see an error message, return the "answer" key with a detailed thought of what you saw.
-    If you ever see a warning when trying to sign up or access a form, try to solve that problem like a real human would before moving on! Always examine your past actions before moving on!
-    Always prioritize finding and clicking the most relevant link for the call, and avoid unnecessary scrolling or random exploration.
-    
-    
-    When looking at a general page where you do not have immediate information of what to do, try to scroll around BEFORE you take and action.
-    Try to look at accordions open with a "+" or "-" icon so that you can look at the content of the page
-    
-    If you spot an immediately playable mp3, you have reached the success page, and can report SUCCESS
     """
