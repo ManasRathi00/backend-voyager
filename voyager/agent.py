@@ -4,19 +4,24 @@ from .prompts import SYSTEM_PROMPT
 import asyncio
 
 class Voyager:
-    def __init__(self, playwright: Playwright, scripts: str, browser : Browser, system_prompt : str):
+    def __init__(self, playwright: Playwright, scripts: str, max_concurrency : int = 10, return_images : bool = True):
         self.playwright = playwright
         self.scripts = scripts
-        self.system_prompt = system_prompt
-        self.browser : Browser = browser
-        self.new_page = None
-        self.max_tasks_semaphore = None
+        self.max_concurrency = asyncio.Semaphore(max_concurrency)
+        self.return_images = True
+        
+        
+        self.system_prompt = None
+        self.browser : Browser | None = None
+        
+        #init variables
+        self.actions_history = []
 
     @classmethod
     async def create(
-        self,
+        cls,
         playwright: Playwright,
-        max_tasks: int = 10,
+        max_concurrency: int = 10,
         return_images: bool = False,
         save_images: bool = False,
     ) -> "Voyager":   # 👈 THIS is the key line
@@ -24,12 +29,32 @@ class Voyager:
             scripts = file.read()
             
 
-        browser = await playwright.chromium.launch()
-        instance = self(playwright, scripts, browser, SYSTEM_PROMPT)
-
-
-        instance.new_page = await browser.new_page()
-        await instance.new_page.evaluate(instance.scripts)
-        instance.max_tasks_semaphore = asyncio.Semaphore(max_tasks)
+        instance = cls(playwright, scripts, max_concurrency)
 
         return instance
+    
+    
+    async def start_task(self):
+        self.browser = await self.playwright.chromium.launch(headless=True)
+        self.system_prompt = SYSTEM_PROMPT
+        self.actions_history = []
+        await asyncio.sleep(20)
+
+    
+    async def execute_action_click(self, web_ele):
+        pass
+    
+    async def execute_action_scroll(self, info_content, web_ele):
+        pass
+    
+    async def execute_action_type(self, info_content, web_ele):
+        pass
+    
+    async def execute_action_scroll(self, scroll_ele_number,scroll_content, web_ele):
+        pass
+    
+    async def execute_action_extract(self):
+        pass
+    
+    async def execute_action_success(self):
+        pass
