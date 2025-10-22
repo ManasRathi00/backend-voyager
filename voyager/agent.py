@@ -1,8 +1,11 @@
 from __future__ import annotations  # top of file (for forward references)
 from playwright.async_api import Playwright, Browser
-from .prompts import SYSTEM_PROMPT
+from .prompt import SYSTEM_PROMPT
 import asyncio
+from typing import Optional
 
+
+from .types import LaunchOptions
 class Voyager:
     def __init__(self, playwright: Playwright, scripts: str, max_concurrency : int = 10, return_images : bool = True):
         self.playwright = playwright
@@ -34,11 +37,15 @@ class Voyager:
         return instance
     
     
-    async def start_task(self):
-        self.browser = await self.playwright.chromium.launch(headless=True)
+    async def start_task(self, task, browser_cdp : Optional[str] = None, **kwargs: LaunchOptions):
+        if browser_cdp:
+            self.browser = await self.playwright.chromium.connect_over_cdp(endpoint_url=browser_cdp)
+        else:
+            self.browser = await self.playwright.chromium.launch(**kwargs)
+
         self.system_prompt = SYSTEM_PROMPT
         self.actions_history = []
-        await asyncio.sleep(20)
+        
 
     
     async def execute_action_click(self, web_ele):
