@@ -1,3 +1,4 @@
-from .params import LaunchOptions, ProxySettings, VoyagerTask
+from .launch_params import LaunchOptions, ProxySettings
+from .steps import VoyagerTask, VoyagerStep
 
-__all__ = ["LaunchOptions", "ProxySettings", "VoyagerTask"]
+__all__ = ["LaunchOptions", "ProxySettings", "VoyagerTask", "VoyagerStep"]

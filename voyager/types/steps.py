@@ -5,6 +5,7 @@ from typing import Optional, List
 class VoyagerTask(BaseModel):
     start_url : str
     prompt : str
+    max_iterations : int = 20
     
 # "actions" : [{
 #             "element_number" : [numerical element] -- element number of the element that needs to be scrolled. 
