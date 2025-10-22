@@ -103,8 +103,9 @@
       var color = "#000000";
       return color;
     }
-
+    allIndexes = [];
     items.forEach(function (item, index) {
+      item.element.setAttribute("data-voyager-element-index", index);
       item.rects.forEach((bbox) => {
         newElement = document.createElement("div");
         var borderColor = getFixedColor(index);
@@ -129,13 +130,15 @@
         label.style.fontSize = "12px";
         label.style.borderRadius = "2px";
         newElement.appendChild(label);
-
+        newElement.setAttribute("data-voyager-rect-index", index);
         document.body.appendChild(newElement);
-        labels.push(newElement);
+
+        labels.push(newElement); // Corrected line
       });
+      allIndexes.push(index);
     });
 
-    return [labels, items];
+    return allIndexes;
   }
   return markPage();
 })();

@@ -1,0 +1,178 @@
+[
+    {
+        "element": "ref: <Node>",
+        "include": true,
+        "area": 1146.40625,
+        "rects": [
+            {
+                "left": 290.625,
+                "top": 18,
+                "right": 347.9453125,
+                "bottom": 38,
+                "width": 57.3203125,
+                "height": 20
+            }
+        ],
+        "text": "Features"
+    },
+    {
+        "element": "ref: <Node>",
+        "include": true,
+        "area": 1810.3125,
+        "rects": [
+            {
+                "left": 371.9453125,
+                "top": 18,
+                "right": 462.4609375,
+                "bottom": 38,
+                "width": 90.515625,
+                "height": 20
+            }
+        ],
+        "text": "Live previews"
+    },
+    {
+        "element": "ref: <Node>",
+        "include": true,
+        "area": 1377.03125,
+        "rects": [
+            {
+                "left": 486.4609375,
+                "top": 18,
+                "right": 555.3125,
+                "bottom": 38,
+                "width": 68.8515625,
+                "height": 20
+            }
+        ],
+        "text": "Use cases"
+    },
+    {
+        "element": "ref: <Node>",
+        "include": true,
+        "area": 4940.25,
+        "rects": [
+            {
+                "left": 555.3125,
+                "top": 12,
+                "right": 709.6953125,
+                "bottom": 44,
+                "width": 154.3828125,
+                "height": 32
+            }
+        ],
+        "text": "Cruxal"
+    },
+    {
+        "element": "ref: <Node>",
+        "include": true,
+        "area": 919.84375,
+        "rects": [
+            {
+                "left": 709.6953125,
+                "top": 18,
+                "right": 755.6875,
+                "bottom": 38,
+                "width": 45.9921875,
+                "height": 20
+            }
+        ],
+        "text": "Pricing"
+    },
+    {
+        "element": "ref: <Node>",
+        "include": true,
+        "area": 1529.0625,
+        "rects": [
+            {
+                "left": 779.6875,
+                "top": 18,
+                "right": 856.140625,
+                "bottom": 38,
+                "width": 76.453125,
+                "height": 20
+            }
+        ],
+        "text": "Wall of love"
+    },
+    {
+        "element": "ref: <Node>",
+        "include": true,
+        "area": 1296,
+        "rects": [
+            {
+                "left": 995.5390625,
+                "top": 10,
+                "right": 1031.5390625,
+                "bottom": 46,
+                "width": 36,
+                "height": 36
+            }
+        ],
+        "text": ""
+    },
+    {
+        "element": "ref: <Node>",
+        "include": true,
+        "area": 2618.15625,
+        "rects": [
+            {
+                "left": 1039.5390625,
+                "top": 10,
+                "right": 1112.265625,
+                "bottom": 46,
+                "width": 72.7265625,
+                "height": 36
+            }
+        ],
+        "text": "Log in"
+    },
+    {
+        "element": "ref: <Node>",
+        "include": true,
+        "area": 2312.71875,
+        "rects": [
+            {
+                "left": 1120.265625,
+                "top": 10,
+                "right": 1184.5078125,
+                "bottom": 46,
+                "width": 64.2421875,
+                "height": 36
+            }
+        ],
+        "text": "Start"
+    },
+    {
+        "element": "ref: <Node>",
+        "include": true,
+        "area": 4906.25,
+        "rects": [
+            {
+                "left": 489.7109375,
+                "top": 391,
+                "right": 612.3671875,
+                "bottom": 431,
+                "width": 122.65625,
+                "height": 40
+            }
+        ],
+        "text": "Get started"
+    },
+    {
+        "element": "ref: <Node>",
+        "include": true,
+        "area": 6036.875,
+        "rects": [
+            {
+                "left": 624.3671875,
+                "top": 391,
+                "right": 775.2890625,
+                "bottom": 431,
+                "width": 150.921875,
+                "height": 40
+            }
+        ],
+        "text": "View Features"
+    }
+]

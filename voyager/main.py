@@ -3,7 +3,9 @@ import asyncio
 from pathlib import Path
 from typing import Optional, Callable
 
-from playwright.async_api import Playwright, Browser
+from config.logger import logger
+
+from playwright.async_api import Playwright, Browser, Page
 from .prompts.system_prompt import SYSTEM_PROMPT
 from .types import LaunchOptions, VoyagerTask, VoyagerStep  # assume these are defined
 
@@ -74,28 +76,41 @@ class Voyager:
         `callback` will be invoked for each step with the VoyagerStep data.
         """
         async with self.concurrency_semaphore:
-            context = None
-            page = None
+            task_browser_context = None
+            task_page = None
             try:
-                context = await self.browser.new_context()
-                page = await context.new_page()
+                task_browser_context = await self.browser.new_context()
+                task_page = await task_browser_context.new_page()
 
                 self.system_prompt = SYSTEM_PROMPT
                 self.actions_history = []
                 self._task = task
                 
-                if callback:
-                    self._callback = callback
                     
-                await page.goto(task.start_url)
-                data = await page.evaluate(self.scripts)
-                await asyncio.sleep(5)
-                print(data)
+                await task_page.goto(task.start_url)
+                all_indexes = await  self.get_page_web_element_rect(page=task_page)
+                element = task_page.locator('[data-voyager-element-index="3"]')
+                
+                # You can interact with it, e.g. click, read text, etc.
+                text = await element.text_content()
+                print(text)
+#                 await task_page.evaluate("""
+#     () => {
+#         document.querySelectorAll('[data-voyager-rect-index]').forEach(el => el.remove());
+#     }
+# """)            
+                await asyncio.sleep(3)
+                # print(data)
             finally:
-                if page:
-                    await page.close()
-                if context:
-                    await context.close()
+                if task_page:
+                    await task_page.close()
+                if task_browser_context:
+                    await task_browser_context.close()
+                    
+    async def get_page_web_element_rect(self, page: Page):
+        all_indexes = await page.evaluate(self.scripts)
+        print(all_indexes)
+        return all_indexes
 
     async def stop(self) -> None:
         """Close the browser if open."""
