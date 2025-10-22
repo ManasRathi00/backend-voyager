@@ -81,6 +81,17 @@ class Voyager:
         if callback:
             self._callback = callback
             
+        context= await self.browser.new_context()
+            
+        page = await self.browser.new_page()
+        
+        
+        await page.goto(task.start_url)
+        data = await page.evaluate(self.scripts)
+        await asyncio.sleep(5)
+        print(data)
+        
+            
         
         
 
