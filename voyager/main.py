@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional, Callable
 
 from playwright.async_api import Playwright, Browser
-from .prompt import SYSTEM_PROMPT
+from .prompts.system_prompt import SYSTEM_PROMPT
 from .types import LaunchOptions, VoyagerTask, VoyagerStep  # assume these are defined
 
 class Voyager:
@@ -43,7 +43,7 @@ class Voyager:
         Async factory. Reads the browser helper script and returns instance.
         Consider using aiofiles if this needs to be non-blocking.
         """
-        with open("voyager/browser-annotate.js", "r", encoding="utf-8") as f:
+        with open("voyager/scripts/browser-annotate.js", "r", encoding="utf-8") as f:
             scripts = f.read()
 
         instance = cls(
