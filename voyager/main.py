@@ -15,20 +15,20 @@ class Voyager:
     def __init__(
         self,
         playwright: Playwright,
+        browser: Browser,  # Pass the launched browser instance
         scripts: str,
         max_concurrency: int = 10,
         return_images: bool = True,
     ) -> None:
         self.playwright = playwright
+        self.browser = browser  # Store the browser instance
         self.scripts = scripts
-        # use an explicit semaphore attribute name
         self.concurrency_semaphore = asyncio.Semaphore(max_concurrency)
         self.return_images = return_images
 
         self.system_prompt: Optional[str] = None
-        self.browser: Optional[Browser] = None
+        # self.browser: Optional[Browser] = None # Removed, now passed in __init__
 
-        # history of executed actions/steps
         self.actions_history: list = []
 
     @classmethod
@@ -38,69 +38,72 @@ class Voyager:
         max_concurrency: int = 10,
         return_images: bool = False,
         save_images: bool = False,
+        browser_cdp: Optional[str] = None, # Added for CDP connection
+        **kwargs: LaunchOptions, # Added for launch options
     ) -> "Voyager":
         """
         Async factory. Reads the browser helper script and returns instance.
-        Consider using aiofiles if this needs to be non-blocking.
+        Launches the browser here.
         """
         with open("voyager/scripts/browser-annotate.js", "r", encoding="utf-8") as f:
             scripts = f.read()
 
+        if browser_cdp:
+            browser = await playwright.chromium.connect_over_cdp(endpoint_url=browser_cdp)
+        else:
+            browser = await playwright.chromium.launch(**kwargs)
+
         instance = cls(
             playwright=playwright,
+            browser=browser,
             scripts=scripts,
             max_concurrency=max_concurrency,
             return_images=return_images,
         )
-        # you can store save_images flag if you need it
         instance._save_images = save_images
         return instance
 
     async def start_task(
         self,
         task: VoyagerTask,
-        browser_cdp: Optional[str] = None,
         callback: Optional[Callable[[VoyagerStep], None]] = None,
-        **kwargs: LaunchOptions,
     ) -> None:
         """
         Start a browser session for a task.
-        `**kwargs` are Playwright launch options (TypedDict LaunchOptions) — IDE should autocomplete.
+        Each task gets its own browser context for isolation.
         `callback` will be invoked for each step with the VoyagerStep data.
         """
-        if browser_cdp:
-            # endpoint_url is what Playwright expects for connect_over_cdp
-            self.browser = await self.playwright.chromium.connect_over_cdp(endpoint_url=browser_cdp)
-        else:
-            self.browser = await self.playwright.chromium.launch(**kwargs)
+        async with self.concurrency_semaphore:
+            context = None
+            page = None
+            try:
+                context = await self.browser.new_context()
+                page = await context.new_page()
 
-        self.system_prompt = SYSTEM_PROMPT
-        self.actions_history = []
-        self._task = task
-        
-        if callback:
-            self._callback = callback
-            
-        context= await self.browser.new_context()
-            
-        page = await self.browser.new_page()
-        
-        
-        await page.goto(task.start_url)
-        data = await page.evaluate(self.scripts)
-        await asyncio.sleep(5)
-        print(data)
-        
-            
-        
-        
-
+                self.system_prompt = SYSTEM_PROMPT
+                self.actions_history = []
+                self._task = task
+                
+                if callback:
+                    self._callback = callback
+                    
+                await page.goto(task.start_url)
+                data = await page.evaluate(self.scripts)
+                await asyncio.sleep(5)
+                print(data)
+            finally:
+                if page:
+                    await page.close()
+                if context:
+                    await context.close()
 
     async def stop(self) -> None:
         """Close the browser if open."""
         if self.browser:
             try:
                 await self.browser.close()
+            except Exception as e:
+                print(f"Error closing browser: {e}")
             finally:
                 self.browser = None
 

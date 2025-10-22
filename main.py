@@ -5,26 +5,27 @@ from voyager.types import VoyagerTask
 
 async def main():
     async with async_playwright() as playwright:
-        # Create Voyager instance
-        voyager = await Voyager.create(playwright)
+        # Create Voyager instance, launching the browser here
+        voyager = await Voyager.create(playwright, headless=False) # headless=False so you can see it open
 
         # Define a dummy VoyagerTask
-        task = VoyagerTask(
+        task_1 = VoyagerTask(
+            start_url="https://www.google.com",
+            prompt="Just open Google."
+        )
+        task_2 = VoyagerTask(
+            start_url="https://www.google.com",
+            prompt="Just open Google."
+        )
+        task_3 = VoyagerTask(
             start_url="https://www.google.com",
             prompt="Just open Google."
         )
 
-        # Start a browser for this task
-        await voyager.start_task(task, headless=False)  # headless=False so you can see it open
+        await asyncio.gather(voyager.start_task(task_1),voyager.start_task(task_2),voyager.start_task(task_3))
 
-        # # Use the Playwright browser/page directly
-        # context = await voyager.browser.new_context()
-        # page = await context.new_page()
-        # await page.goto(task.start_url)
-        # print(f"Opened page title: {await page.title()}")
-
-        # await asyncio.sleep(3)  # wait a few seconds so you can see it open
-        # await voyager.stop()  # close browser
+        # The browser will be closed automatically by the 'async with voyager:' block
+        # No need for explicit voyager.stop() here.
 
 if __name__ == "__main__":
     asyncio.run(main())
