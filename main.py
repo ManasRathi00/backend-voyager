@@ -20,17 +20,14 @@ async def main():
 
     # Define dummy VoyagerTasks
     task_1 = VoyagerTask(
-        start_url="https://www.google.com/",
-        prompt="Just open Google."
+        start_url="https://www.cruxal.in/",
+        prompt="Login to cruxal and get data."
     )
-    task_2 = VoyagerTask(
-        start_url="https://www.google.com",
-        prompt="Just open Google."
-    )
+
 
     await asyncio.gather(
         execute_voyager_task(browser_pool,voyager, task_1),
-        execute_voyager_task(browser_pool,voyager, task_2)
+
     )
 
     await browser_pool.stop() # Stop the browser pool

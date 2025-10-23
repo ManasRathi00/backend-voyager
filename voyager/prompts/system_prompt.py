@@ -67,6 +67,7 @@ Here are different action types, you can pick and choose from them when generati
     ]
 }
 
+Make sure to return a JSON with an "actions" key with this said object type in the list
 You can pick and choose from the above actions on every iteration. The user will provide a task, use a high amout on reasoning to achive the goal privded by the user.
 return "success" only when the task is achieved, or is no longer achievable.
 Every iteration except the first, you can see your previous actions, try to be high reasoning when doing these tasks, look at your past actions for this.

@@ -1,3 +1,4 @@
 litellm==1.78.2
 pytest-playwright==0.7.1
 aiohttp==3.13.0
+pydantic_settings==2.11.0
