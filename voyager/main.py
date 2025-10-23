@@ -17,11 +17,17 @@ class Voyager:
 
     def __init__(
         self,
-        scripts: str,
+        annotate_script : str,
+        clear_script : str,
         max_concurrency: int = 10,
         return_images: bool = True,
     ) -> None:
-        self.scripts = scripts
+        self.annotate_script = annotate_script
+        
+        
+        self.clear_script = clear_script
+        
+
         self.concurrency_semaphore = asyncio.Semaphore(max_concurrency)
         self.return_images = return_images
 
@@ -39,10 +45,13 @@ class Voyager:
         Async factory. Reads the browser helper script and returns instance.
         """
         with open("voyager/scripts/browser-annotate.js", "r", encoding="utf-8") as f:
-            scripts = f.read()
+            annotate_script = f.read()
+        with open("voyager/scripts/clear-rects.js", "r", encoding="utf-8") as f:
+            clear_script = f.read()
 
         instance = cls(
-            scripts=scripts,
+            annotate_script = annotate_script,
+            clear_script=clear_script,
             max_concurrency=max_concurrency,
             return_images=return_images,
         )
@@ -66,30 +75,32 @@ class Voyager:
 
                 self.system_prompt = SYSTEM_PROMPT
                 self.actions_history = []
-                self._task = task
                 
+                iteration = 0
                 await task_page.goto(task.start_url)
-                all_indexes = await  self.get_page_web_element_rect(page=task_page)
-                element = task_page.locator('[data-voyager-element-index="3"]')
-                
-                # You can interact with it, e.g. click, read text, etc.
-                text = await element.text_content()
-                print(text)
-#                 await task_page.evaluate("""
-#     () => {
-#         document.querySelectorAll('[data-voyager-rect-index]').forEach(el => el.remove());
-#     }
-# """)            
-                await asyncio.sleep(3)
+                while iteration < task.max_iterations:
+ 
+                    all_indexes = await  self.get_page_web_element_rect(page=task_page)
+                    element = task_page.locator('[data-voyager-element-index="3"]')
+                    
+                    # You can interact with it, e.g. click, read text, etc.
+                    text = await element.text_content()
+                    logger.info(text)      
+                    await asyncio.sleep(3)
+                    await self.clear_rects(page=task_page)
                 # print(data)
             finally:
                 if task_page:
                     await task_page.close()
                     
     async def get_page_web_element_rect(self, page: Page):
-        all_indexes = await page.evaluate(self.scripts)
-        print(all_indexes)
+        all_indexes = await page.evaluate(self.annotate_script)
+        logger.info(all_indexes)
         return all_indexes
+    
+    
+    async def clear_rects(self, page : Page):
+        await page.evaluate(self.clear_script)
 
     # Action execution stubs (single definitions, clear params)
     async def execute_action_click(self, web_ele) -> None:
