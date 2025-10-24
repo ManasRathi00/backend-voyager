@@ -48,8 +48,8 @@ Here are different action types, you can pick and choose from them when generati
         },
         {
             "type": "google",
-            "element_number": null, -- element number is null for google actions
-            "content": null, -- content is null for google actions
+            "element_number": null, -- element number is null for google actions, this action will just take you to the google home page
+            "content": "null for google"
             "reasoning": "Must be included on all steps"
         },
         {
@@ -60,6 +60,12 @@ Here are different action types, you can pick and choose from them when generati
         },
         {
             "type": "success",
+            "element_number": null, -- element number is null for answer actions
+            "content": "[Thought]", -- Thought of how the task was accomplished and completion
+            "reasoning": "Must be included on all steps"
+        },
+        {
+            "type": "stop",
             "element_number": null, -- element number is null for answer actions
             "content": "[Thought]", -- Thought of how the task was accomplished and completion
             "reasoning": "Must be included on all steps"

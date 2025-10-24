@@ -1,3 +1,3 @@
-from .steps import VoyagerTask, VoyagerStep, VoyagerAction
+from .steps import VoyagerTask, VoyagerStep, VoyagerAction, StepExecution, EndExecution
 
-__all__ = ["VoyagerTask", "VoyagerStep", "VoyagerAction"]
+__all__ = ["VoyagerTask", "VoyagerStep", "VoyagerAction", "StepExecution", "EndExecution"]

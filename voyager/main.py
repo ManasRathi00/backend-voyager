@@ -9,7 +9,7 @@ import base64
 from utils import json_parser
 
 from litellm import acompletion
-from playwright.async_api import Playwright, BrowserContext, Page
+from playwright.async_api import Playwright, BrowserContext, Page, Locator
 from .prompts.system_prompt import SYSTEM_PROMPT
 from .types import VoyagerTask, VoyagerStep, VoyagerAction  # assume these are defined
 
@@ -116,7 +116,11 @@ class Voyager:
     async def get_page_web_element_rect(self, page: Page):
         all_indexes = await page.evaluate(self.annotate_script)
         return all_indexes
-    
+
+        
+    def get_voyager_element_with_index(self, task_page : Page, index:int) -> Locator:
+        element = task_page.locator(f'[data-voyager-element-index="{index}"]')
+        return element
     
     async def clear_rects(self, page : Page):
         await page.evaluate(self.clear_script)
