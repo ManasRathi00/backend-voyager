@@ -17,6 +17,7 @@ Executed : {action.type}
 Reasoning : {action.reasoning}
 Content ; {action.content}
 Element : {action.element_number}
+Success : True
 """
 
 async def safe_execute_action(action : VoyagerAction, page : Page) -> StepExecution:
@@ -37,7 +38,6 @@ async def safe_execute_action(action : VoyagerAction, page : Page) -> StepExecut
         "wait" : execute_wait,
     }
     
-    message_raw = action.model_dump() # Use model_dump() as message_raw is Dict
 
     success_obj = None
     stop_obj = None
@@ -56,14 +56,14 @@ async def safe_execute_action(action : VoyagerAction, page : Page) -> StepExecut
             stop_obj = EndExecution(status=True, content=action.content, reason=action.reasoning)
 
         return StepExecution(
-            message=map_voyager_action_to_string(action),
-            message_raw=message_raw,
+            message_formatted_string=map_voyager_action_to_string(action),
+            message_json_string=json.dumps(action.model_dump(), indent=2),
             success=success_obj,
             stop=stop_obj
         )
     except Exception as e:
         return StepExecution(
-            message=f"Error executing action: {e}",
-            message_raw=message_raw,
+            message_formatted_string=map_voyager_action_to_string(action),
+            message_json_string=json.dumps(action.model_dump(), indent=2),
             error=str(e)
         )

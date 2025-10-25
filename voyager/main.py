@@ -9,9 +9,11 @@ import base64
 from utils import json_parser
 
 from litellm import acompletion
-from playwright.async_api import Playwright, BrowserContext, Page, Locator
+from playwright.async_api import BrowserContext, Page
 from .prompts.system_prompt import SYSTEM_PROMPT
 from .types import VoyagerTask, VoyagerStep, VoyagerAction  # assume these are defined
+
+from .actions import safe_execute_action
 
 class Voyager:
     """
@@ -73,6 +75,7 @@ class Voyager:
         async with self.concurrency_semaphore:
             task_page = None
             try:
+                logger.info(f"Starting task: {task.prompt} at {task.start_url}")
                 task_page = await browser_context.new_page()
 
                 self.system_prompt = SYSTEM_PROMPT
@@ -82,35 +85,84 @@ class Voyager:
             
                 iteration = 0
                 await task_page.goto(task.start_url)
+                
+                execution_log_buffer = ""
                 while iteration < task.max_iterations:
- 
-                    all_indexes = await  self.get_page_web_element_rect(page=task_page)
+                    logger.info(f"Iteration {iteration + 1}/{task.max_iterations}")
+                    
+                    # Wait for the page to be stable after any navigation
+                    await task_page.wait_for_load_state("networkidle")
+                    
+                    # Inject and execute annotation script to get element rectangles
+                    all_indexes = await task_page.evaluate(self.annotate_script)
                     
                     page_bytes = await task_page.screenshot()
+                    import os
+                    output_dir = "screenshots"
+                    os.makedirs(output_dir, exist_ok=True)
+                    image_path = os.path.join(output_dir, f"image-{iteration + 1}.png")
+                    with open(image_path, "wb") as f:
+                        f.write(page_bytes)
+                    logger.info(f"Saved screenshot: {image_path}")
                     
                     screenshot_base_64 = base64.b64encode(page_bytes).decode()
                     
+                    # Clear the annotations from the page
+                    await task_page.evaluate(self.clear_script)
                     # This is the function to remove all previous base_64 images from the messages object (to manage context)
                     message_history = self.clear_images_from_message_history(message_history=message_history)
                     
                     # This is to create a new message object with the latest base 64 image
-                    message_history = self.add_latest_user_message_with_screenshot(screenshot_base_64=screenshot_base_64,message_history=message_history)
+                    message_history = self.add_latest_user_message_with_screenshot(screenshot_base_64=screenshot_base_64,message_history=message_history, additional_message=execution_log_buffer)
+                    with open(f"message_history-{iteration + 1}.json", "w") as file:
+                        import json
+                        json.dump(message_history, file, indent=4)
+                    logger.info("Calling AI for next actions...")
+                    response = await self.call_ai(message_history=message_history)
+                    logger.info("AI response received.")
                     
+                    voyager_actions = response[0]
+                    raw_response = response[1]
                     
+                    # 1) The message from the assistant should be added back to the message history as IS the raw one
+                    message_history.append({"role" : "assistant", "content" : raw_response })
+
+                    # Clearing Execution Log Buffer
+                    execution_log_buffer = "Logs from the last step : \n"
                     
-                    voyager_action = await self.call_ai(message_history=message_history)
-                    print(voyager_action)
+                    for i, action in enumerate(voyager_actions):
+                        logger.info(f"Executing action {i + 1}/{len(voyager_actions)}: {action.type}")
+                        logger.info(action.model_dump())
+                        
+                        action_resp = await safe_execute_action(action,task_page)
+                        
+                        if action_resp.success:
+                            logger.info(f"Action {action.type} succeeded: {action_resp.success.content}")
+                            execution_log_buffer += f"\nTask completed successfully: {action_resp.success.content}"
+                            break # Break the loop if task is successful
+                        
+                        
+                        if action_resp.stop:
+                            logger.info(f"Action {action.type} stopped: {action_resp.stop.reason}")
+                            execution_log_buffer += f"\nTask stopped: {action_resp.stop.reason}"
+                            break # Break the loop if task is stopped
+                        
+                            
+                        if action_resp.error:
+                            logger.error(f"Error executing action {action.type}: {action_resp.message_formatted_string}. Details: {action_resp.error}")
+                            execution_log_buffer += f"\nError executing action: {action_resp.message_formatted_string}\nError details: {action_resp.error}"
+                            continue # Continue to next action if there's an error
+                            
+                        # Updating the action log buffer
+                        logger.info(action_resp.message_formatted_string)
+                        execution_log_buffer += f"\n{action_resp.message_formatted_string}"
+                    iteration += 1
                     
-                    element = task_page.locator('[data-voyager-element-index="3"]')
+                    await asyncio.sleep(0.5)
                     
-                    # You can interact with it, e.g. click, read text, etc.
-                    text = await element.text_content()
-                    logger.info(text)      
-                    await asyncio.sleep(3)
-                    await self.clear_rects(page=task_page)
-                # print(data)
             finally:
                 if task_page:
+                    logger.info(f"Closing page for task: {task.prompt}")
                     await task_page.close()
                     
     async def get_page_web_element_rect(self, page: Page):
@@ -118,10 +170,6 @@ class Voyager:
         return all_indexes
 
         
-    def get_voyager_element_with_index(self, task_page : Page, index:int) -> Locator:
-        element = task_page.locator(f'[data-voyager-element-index="{index}"]')
-        return element
-    
     async def clear_rects(self, page : Page):
         await page.evaluate(self.clear_script)
         
@@ -191,7 +239,8 @@ class Voyager:
     def add_latest_user_message_with_screenshot(
         self,
         screenshot_base_64: str,
-        message_history: List[Dict[str, Any]]
+        message_history: List[Dict[str, Any]],
+        additional_message: Optional[str] = None # New parameter
     ) -> List[Dict[str, Any]]:
         """
         Appends a new user message containing the task prompt and current page screenshot
@@ -199,19 +248,25 @@ class Voyager:
 
         Args:
             screenshot_base_64: Base64 string of the current page screenshot.
-            task_prompt: Instruction or objective for the current task iteration.
             message_history: The running list of conversation messages.
+            additional_message: An optional string message to prepend to the user's content.
 
         Returns:
             Updated message history with the new user message appended.
         """
 
-        content: List[Dict[str, Any]] = [
-            {
-                "type": "image_url",
-                "image_url": {"url": f"data:image/png;base64,{screenshot_base_64}"}
-            }
-        ]
+        content: List[Dict[str, Any]] = []
+
+        if additional_message:
+            content.append({
+                "type": "text",
+                "text": additional_message
+            })
+
+        content.append({
+            "type": "image_url",
+            "image_url": {"url": f"data:image/png;base64,{screenshot_base_64}"}
+        })
 
         user_message = {
             "role": "user",
@@ -224,7 +279,7 @@ class Voyager:
     
     
     
-    async def call_ai(self, message_history : List) -> List[VoyagerAction]:
+    async def call_ai(self, message_history : List) -> List[List[VoyagerAction], str]:
         response = await acompletion(
             model=settings.MODEL,
             messages=message_history,
@@ -235,43 +290,15 @@ class Voyager:
 
         
         model_output = json_parser(response.choices[0].message.content)
-        with open("output.json", 'w') as file:
-            import json
-            json.dump(model_output, file, indent=4)
         
         if model_output:
             validated_outputs = []
             for action in model_output["actions"]:
                 validated_outputs.append(VoyagerAction.model_validate(action))
-                return validated_outputs
+            return validated_outputs, response.choices[0].message.content
         else:
-            return AssertionError("Model output failed")
+            raise AssertionError("Model output failed")
         
-
-    # Action execution stubs (single definitions, clear params)
-    async def execute_action_click(self, web_ele) -> None:
-        """Perform a click on a web element (web_ele should be a Playwright element handle)."""
-        pass
-
-    async def execute_action_scroll_element(self, element_index: int, direction: str, web_ele) -> None:
-        """
-        Scroll a specific element (or window).
-        `element_index` = numeric index (or a sentinel for WINDOW),
-        `direction` = "up"|"down".
-        """
-        pass
-
-    async def execute_action_type(self, text: str, web_ele) -> None:
-        """Type text into element."""
-        pass
-
-    async def execute_action_extract(self) -> None:
-        """Extract data from page (implement as needed)."""
-        pass
-
-    async def execute_action_success(self) -> None:
-        """Mark a step/task as successful."""
-        pass
 
     # convenience context manager support (optional)
     async def __aenter__(self) -> "Voyager":

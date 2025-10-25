@@ -31,8 +31,8 @@ class EndExecution(BaseModel):
     content : str
     reason : str
 class StepExecution(BaseModel):
-    message : str
-    message_raw : Dict
+    message_formatted_string : str
+    message_json_string : str
     error : Optional[str] = None
     success : Optional[EndExecution] = None
     stop : Optional[EndExecution] = None
