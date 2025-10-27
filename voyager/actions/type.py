@@ -3,7 +3,7 @@ from typing import Optional
 import random
 async def execute_type(page : Page, element : Optional[Locator], content : Optional[str] = None):
     if element and content is not None:
-        await element.fill("")
-        await element.type(content, random.randint(40, 90))
+        await element.type(content, delay=random.randint(40, 90))
+        await element.press("Enter")
     else:
         raise ValueError("Element or content not provided for type action.")

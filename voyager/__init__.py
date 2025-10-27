@@ -77,8 +77,12 @@ class Voyager:
                     iteration += 1
                     logger.info(f"Iteration {iteration}/{task.max_iterations}")
 
-                    # Capture page state
-                    screenshot_base64 = await self._capture_annotated_screenshot(task_page)
+                    # Capture page state with retry logic for navigation handling
+                    screenshot_base64 = await self._capture_annotated_screenshot(
+                        task_page,
+                        max_retries=3,
+                        retry_delay=0.5
+                    )
                     
                     # Update message history with latest state
                     message_history = self._clear_images_from_history(message_history)
@@ -131,16 +135,63 @@ class Voyager:
                     logger.info(f"Closing page for task: '{task.prompt}'")
                     await task_page.close()
 
-    async def _capture_annotated_screenshot(self, page: Page) -> str:
-        """Annotate page elements, capture screenshot, then clear annotations."""
-        try:
-            await page.evaluate(self.annotate_script)
-            page_bytes = await page.screenshot()
-            await page.evaluate(self.clear_script)
-            return base64.b64encode(page_bytes).decode()
-        except Exception as e:
-            logger.error(f"Screenshot capture failed: {e}")
-            raise
+    async def _capture_annotated_screenshot(
+        self, 
+        page: Page,
+        max_retries: int = 3,
+        retry_delay: float = 0.5
+    ) -> str:
+        """
+        Annotate page elements, capture screenshot, then clear annotations.
+        Implements retry logic to handle navigation-induced execution context destruction.
+        """
+        for attempt in range(max_retries):
+            try:
+                # Wait for page to be stable (but not full networkidle)
+                await page.wait_for_load_state("domcontentloaded")
+                
+                # Small delay to let any immediate navigations settle
+                await asyncio.sleep(0.3)
+                
+                # Check if page is still valid before evaluating
+                if page.is_closed():
+                    raise RuntimeError("Page was closed during screenshot capture")
+                
+                # Execute operations in sequence with context checks
+                await page.evaluate(self.annotate_script)
+                page_bytes = await page.screenshot()
+                await page.evaluate(self.clear_script)
+                
+                return base64.b64encode(page_bytes).decode()
+                
+            except Exception as e:
+                error_msg = str(e).lower()
+                
+                # Check if it's a navigation/context error
+                if "execution context was destroyed" in error_msg or "navigation" in error_msg:
+                    if attempt < max_retries - 1:
+                        logger.warning(
+                            f"Navigation detected during screenshot (attempt {attempt + 1}/{max_retries}). "
+                            f"Retrying in {retry_delay}s..."
+                        )
+                        await asyncio.sleep(retry_delay)
+                        # Increase delay for next attempt
+                        retry_delay *= 1.5
+                        continue
+                    else:
+                        logger.error(
+                            f"Failed to capture screenshot after {max_retries} attempts due to navigation"
+                        )
+                        raise RuntimeError(
+                            "Page navigation interrupted screenshot capture. "
+                            "Consider waiting longer after actions or adjusting retry settings."
+                        ) from e
+                else:
+                    # Different error, don't retry
+                    logger.error(f"Screenshot capture failed: {e}")
+                    raise
+        
+        raise RuntimeError("Unexpected: exited retry loop without return or raise")
 
     async def _execute_actions(
         self,
