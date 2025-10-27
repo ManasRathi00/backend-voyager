@@ -49,7 +49,7 @@ Here are different action types, you can pick and choose from them when generati
         {
             "type": "google",
             "element_number": null, -- element number is null for google actions, this action will just take you to the google home page
-            "content": "null for google"
+            "content": null -- this is null for google
             "reasoning": "Must be included on all steps"
         },
         {

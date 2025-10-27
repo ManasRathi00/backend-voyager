@@ -1,11 +1,8 @@
 from pydantic import BaseModel
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Callable, Awaitable
     
 # Voyager Task
-class VoyagerTask(BaseModel):
-    start_url : str
-    prompt : str
-    max_iterations : int = 100
+
     
 # "actions" : [{
 #             "element_number" : [numerical element] -- element number of the element that needs to be scrolled. 
@@ -18,18 +15,29 @@ class VoyagerTask(BaseModel):
 
 class VoyagerAction(BaseModel):
     type : str
-    element_number : int
+    element_number : Optional[int]
     content : Optional[str]
-    reasoning : str
+    reasoning :Optional[str]
     
 class VoyagerStep(BaseModel):
     image_base_64 : Optional[str] = None
     actions : List[VoyagerAction]
     
+    
+class VoyagerTask(BaseModel):
+    start_url : str
+    prompt : str
+    max_iterations : int = 100
+    callback:  Optional[Callable[[VoyagerStep], Awaitable[None]]] = None
+    
+    
+    
 class EndExecution(BaseModel):
     status : bool
     content : str
     reason : str
+    
+    
 class StepExecution(BaseModel):
     message_formatted_string : str
     message_json_string : str

@@ -1,9 +1,13 @@
 import asyncio
-from playwright.async_api import async_playwright, Browser, BrowserContext
+# from playwright.async_api import async_playwright, Browser, BrowserContext
 from typing import Optional, List, AsyncGenerator
 from contextlib import asynccontextmanager
-
+from fake_useragent import UserAgent
 from .types.launch_options import LaunchOptions
+# from patchright.async_api import async_playwright, Browser, BrowserContext
+
+from playwright.async_api import async_playwright, Browser, BrowserContext
+from playwright_stealth import Stealth
 
 class BrowserPool:
     def __init__(
@@ -12,15 +16,19 @@ class BrowserPool:
         max_browsers: int = 4,
         cdp_endpoints: Optional[List[str]] = None,
         launch_options: Optional[LaunchOptions] = None,
+        enable_anti_bot: bool = False,
     ):
         self.max_contexts_per_browser = max_contexts_per_browser
         self.max_browsers = max_browsers
         self.cdp_endpoints = cdp_endpoints or []
         self.launch_options = launch_options or {"headless": True}
+        self.enable_anti_bot = enable_anti_bot
         self.browsers: List[Browser] = []
         self.browser_semaphores: List[asyncio.Semaphore] = []
         self.playwright = None
         self.lock = asyncio.Lock()
+        if self.enable_anti_bot:
+            self.user_agent_generator = UserAgent()
 
     async def start(self):
         self.playwright = await async_playwright().start()
@@ -84,7 +92,16 @@ class BrowserPool:
         """
         browser, sem = await self._get_available_browser()
         async with sem:
+            if self.enable_anti_bot and "user_agent" not in context_kwargs:
+                context_kwargs["user_agent"] = self.user_agent_generator.random
             context = await browser.new_context(**context_kwargs)
+            stealth = Stealth()
+            await stealth.apply_stealth_async(context)
+            await  context.add_init_script("""
+                Object.defineProperty(navigator, 'webdriver', {
+                get: () => undefined
+                })
+            """)
             try:
                 yield context
             finally:

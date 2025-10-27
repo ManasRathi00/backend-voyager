@@ -12,16 +12,16 @@ async def execute_voyager_task(browser_pool : BrowserPool, voyager_instance: Voy
         await voyager_instance.start_task(context, task)
 
 async def main():
-    browser_pool = BrowserPool(launch_options={"headless" : False})
+    browser_pool = BrowserPool(launch_options={"headless" : False}, enable_anti_bot=True)
     await browser_pool.start() # Start the browser pool
 
     # Create Voyager instance (no longer launches browser)
-    voyager = await Voyager.create()
+    voyager = Voyager(return_images=True)
 
     # Define dummy VoyagerTasks
     task_1 = VoyagerTask(
-        start_url="https://www.cruxal.in/",
-        prompt="Login to cruxal and get data."
+        start_url="https://www.businesswire.com/news/home/20251022069147/en/Tesla-Releases-Third-Quarter-2025-Financial-Results",
+        prompt="This is a press release about tesla, I want the link of the latest IR call"
     )
 
 
