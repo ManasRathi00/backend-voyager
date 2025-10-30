@@ -14,7 +14,7 @@ You can interact with these elements and the page in the following way :
 4) "wait" - Wait for the page to finish loading to go to the next iteration
 6) "go_back" - Go back to the previous page
 7) "google" - go to google to execute a search
-8) "extract_data" - a place where you have reached on the webpage, and need to invoke the webextractor agent for data extraction
+8) "extract_data" - a place where you extract data on the webpage, keep the data clean and in JSON format. if the user has provided a schema, extract data in that schema, else just it in a logical schema
 9) "success" - return a success message of when the task is completed
 
 Here are different action types, you can pick and choose from them when generating an action plan, Make sure to generate a valid JSON
@@ -59,7 +59,7 @@ Here are different action types, you can pick and choose from them when generati
         {{
             "type": "extract_data",
             "element_number": null, -- element number is null for google actions
-            "content": null, -- content is null for google actions
+            "content": JSON --  a place where you extract data on the webpage, keep the data clean and in JSON format. if the user has provided a schema, extract data in that schema, else just it in a logical schema, this data will later be processed and returned to the user
             "reasoning": "Must be included on all steps"
         }},
         {{

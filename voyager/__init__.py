@@ -1,7 +1,8 @@
 from __future__ import annotations
 import asyncio
 import base64
-from typing import Optional, List, Dict, Any
+from pathlib import Path
+from typing import Optional, Callable, List, Dict, Any
 
 from litellm import acompletion
 from playwright.async_api import BrowserContext, Page
@@ -27,6 +28,7 @@ class Voyager:
     ) -> None:
         self.annotate_script = self._load_script("voyager/scripts/browser-annotate.js")
         self.clear_script = self._load_script("voyager/scripts/clear-rects.js")
+        self.clear_element_tags_script = self._load_script("voyager/scripts/clear-elements.js")
         self.concurrency_semaphore = asyncio.Semaphore(max_concurrency)
         self.return_images = return_images
         self.system_prompt = SYSTEM_PROMPT
@@ -121,8 +123,10 @@ class Voyager:
                         break
 
                     # Wait for page stability before next iteration
+                    
                     await task_page.wait_for_load_state("load")
                     await asyncio.sleep(1)
+                    await task_page.evaluate(self.clear_element_tags_script)
 
                 if iteration >= task.max_iterations:
                     logger.warning(f"Task reached max iterations ({task.max_iterations})")

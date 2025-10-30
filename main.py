@@ -21,12 +21,24 @@ async def main():
     # Define dummy VoyagerTasks
     task_1 = VoyagerTask(
         start_url="https://www.businesswire.com/news/home/20251022069147/en/Tesla-Releases-Third-Quarter-2025-Financial-Results",
-        prompt="This is a press release about tesla, I want the link of the latest IR call"
+        prompt="This is a press release about tesla, I want the link of the latest IR call",
+        
+    )
+    task_2 = VoyagerTask(
+        start_url="https://news.ycombinator.com/",
+        prompt="""
+        Go to Hacker News Show Tab
+        
+        Then get the top news from the last one month (30 days)
+        Try to get the links from the elements as well?
+        
+        
+        """
     )
 
 
     await asyncio.gather(
-        execute_voyager_task(browser_pool,voyager, task_1),
+        execute_voyager_task(browser_pool,voyager, task_2),
 
     )
 

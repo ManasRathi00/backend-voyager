@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional, List, Dict, Callable, Awaitable
+from typing import Optional, List, Dict, Callable, Awaitable, Any
     
 # Voyager Task
 
@@ -15,9 +15,9 @@ from typing import Optional, List, Dict, Callable, Awaitable
 
 class VoyagerAction(BaseModel):
     type : str
-    element_number : Optional[int]
-    content : Optional[str]
-    reasoning :Optional[str]
+    element_number : Optional[int | str] = None
+    content : Optional[str | Any] = None
+    reasoning :Optional[str] = None
     
 class VoyagerStep(BaseModel):
     image_base_64 : Optional[str] = None
