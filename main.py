@@ -16,7 +16,7 @@ async def main():
     await browser_pool.start() # Start the browser pool
 
     # Create Voyager instance (no longer launches browser)
-    voyager = Voyager(return_images=True)
+    voyager = Voyager(return_images=True, save_images_for_debugging=True, save_message_history_for_debugging=True)
 
     # Define dummy VoyagerTasks
     task_1 = VoyagerTask(
@@ -25,12 +25,9 @@ async def main():
         
     )
     task_2 = VoyagerTask(
-        start_url="https://news.ycombinator.com/",
+        start_url="https://github.com",
         prompt="""
-        Go to Hacker News Show Tab
-        
-        Then get the top news from the last one month (30 days)
-        Try to get the links from the elements as well?
+        Extract the top github repos on the topic of portfolio dev pages in react
         
         
         """

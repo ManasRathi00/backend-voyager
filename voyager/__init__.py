@@ -1,8 +1,10 @@
 from __future__ import annotations
 import asyncio
 import base64
+import json
 from pathlib import Path
 from typing import Optional, Callable, List, Dict, Any
+from urllib.parse import urlparse
 
 from litellm import acompletion
 from playwright.async_api import BrowserContext, Page
@@ -25,12 +27,16 @@ class Voyager:
         self,
         max_concurrency: int = 10,
         return_images: bool = True,
+        save_images_for_debugging: bool = False,
+        save_message_history_for_debugging: bool = False
     ) -> None:
         self.annotate_script = self._load_script("voyager/scripts/browser-annotate.js")
         self.clear_script = self._load_script("voyager/scripts/clear-rects.js")
         self.clear_element_tags_script = self._load_script("voyager/scripts/clear-elements.js")
         self.concurrency_semaphore = asyncio.Semaphore(max_concurrency)
         self.return_images = return_images
+        self.save_images_for_debugging = save_images_for_debugging
+        self.save_message_history_for_debugging = save_message_history_for_debugging
         self.system_prompt = SYSTEM_PROMPT
 
     @staticmethod
@@ -45,6 +51,15 @@ class Voyager:
         except Exception as e:
             logger.error(f"Error loading script {path}: {e}")
             raise
+
+    @staticmethod
+    def _get_sanitized_task_url_for_path(url: str) -> str:
+        """Sanitize a URL to be used as a valid path segment."""
+        parsed_url = urlparse(url)
+        # Combine netloc (domain) and path, then replace invalid characters
+        sanitized = (parsed_url.netloc + parsed_url.path).replace('/', '_').replace(':', '_').replace('.', '_').replace('-', '_')
+        # Remove any leading/trailing underscores and ensure it's not empty
+        return sanitized.strip('_') or "default_task"
 
     async def start_task(
         self,
@@ -63,6 +78,20 @@ class Voyager:
             try:
                 logger.info(f"Starting task: '{task.prompt}' at {task.start_url}")
                 task_page = await browser_context.new_page()
+
+                sanitized_task_url = self._get_sanitized_task_url_for_path(task.start_url)
+
+                screenshots_dir: Optional[Path] = None
+                if self.save_images_for_debugging:
+                    screenshots_dir = Path("screenshots") / sanitized_task_url
+                    screenshots_dir.mkdir(parents=True, exist_ok=True)
+                    logger.info(f"Screenshots will be saved to: {screenshots_dir}")
+
+                message_history_dir: Optional[Path] = None
+                if self.save_message_history_for_debugging:
+                    message_history_dir = Path("Messages") / sanitized_task_url
+                    message_history_dir.mkdir(parents=True, exist_ok=True)
+                    logger.info(f"Message history will be saved to: {message_history_dir}")
 
                 message_history = [
                     {"role": "developer", "content": self.system_prompt},
@@ -85,14 +114,27 @@ class Voyager:
                         max_retries=3,
                         retry_delay=0.5
                     )
+
+                    if self.save_images_for_debugging and screenshots_dir:
+                        image_path = screenshots_dir / f"image_{iteration}.png"
+                        with open(image_path, "wb") as f:
+                            f.write(base64.b64decode(screenshot_base64))
+                        logger.debug(f"Saved screenshot to {image_path}")
                     
                     # Update message history with latest state
-                    message_history = self._clear_images_from_history(message_history)
+                    # message_history = self._clear_images_from_history(message_history)
+                    execution_log = f"You are currently on the page : {task_page.url}\n" + execution_log  + "\n Please make sure to double check the element tag you are clicking on in the next image, cross check again and again and valdiate which element you are interacting with. Please do not mess up and select a wrong element index"
                     message_history = self._add_screenshot_message(
                         screenshot_base64,
                         message_history,
                         execution_log if execution_log else None
                     )
+
+                    if self.save_message_history_for_debugging and message_history_dir:
+                        message_path = message_history_dir / f"message_{iteration}.json"
+                        with open(message_path, "w", encoding="utf-8") as f:
+                            json.dump(message_history, f, indent=2)
+                        logger.debug(f"Saved message history to {message_path}")
 
                     # Get AI decision
                     logger.info("Requesting AI decision...")
@@ -107,7 +149,7 @@ class Voyager:
 
                     # Execute actions
                     execution_log = "Logs from the last step:\n"
-                    should_stop, task_completed = await self._execute_actions(
+                    should_stop, task_completed, execution_log = await self._execute_actions(
                         actions, task_page, execution_log
                     )
 
@@ -202,7 +244,7 @@ class Voyager:
         actions: List[VoyagerAction],
         page: Page,
         execution_log: str
-    ) -> tuple[bool, bool]:
+    ) -> tuple[bool, bool, str]:
         """
         Execute a list of actions and return (should_stop, task_completed).
         
@@ -249,7 +291,7 @@ class Voyager:
             logger.info(action_resp.message_formatted_string)
             execution_log += f"\n{action_resp.message_formatted_string}"
 
-        return should_stop, task_completed
+        return should_stop, task_completed, execution_log
 
     @staticmethod
     def _clear_images_from_history(

@@ -1,8 +1,8 @@
 (function () {
-  const MAX_ELEMENTS = 70;
+  const MAX_ELEMENTS = 60;
   const MIN_AREA = 20;
-  const LABEL_FONT_SIZE = 12;
-  const LABEL_PADDING = 4;
+  const LABEL_FONT_SIZE = 16;
+  const LABEL_PADDING = 3;
 
   function markPage() {
     const vw = Math.max(
