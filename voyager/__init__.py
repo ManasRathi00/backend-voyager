@@ -2,6 +2,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import json
+import random
 from pathlib import Path
 from typing import Optional, Callable, List, Dict, Any
 from urllib.parse import urlparse
@@ -28,7 +29,9 @@ class Voyager:
         max_concurrency: int = 10,
         return_images: bool = True,
         save_images_for_debugging: bool = False,
-        save_message_history_for_debugging: bool = False
+        save_message_history_for_debugging: bool = False,
+        mimic_human_behaviour: bool = False,
+        max_images_to_include: int = 1
     ) -> None:
         self.annotate_script = self._load_script("voyager/scripts/browser-annotate.js")
         self.clear_script = self._load_script("voyager/scripts/clear-rects.js")
@@ -37,6 +40,8 @@ class Voyager:
         self.return_images = return_images
         self.save_images_for_debugging = save_images_for_debugging
         self.save_message_history_for_debugging = save_message_history_for_debugging
+        self.mimic_human_behaviour = mimic_human_behaviour
+        self.max_images_to_include = max_images_to_include
         self.system_prompt = SYSTEM_PROMPT
 
     @staticmethod
@@ -78,6 +83,7 @@ class Voyager:
             try:
                 logger.info(f"Starting task: '{task.prompt}' at {task.start_url}")
                 task_page = await browser_context.new_page()
+                await task_page.evaluate("document.body.style.zoom='0.8'")
 
                 sanitized_task_url = self._get_sanitized_task_url_for_path(task.start_url)
 
@@ -122,7 +128,7 @@ class Voyager:
                         logger.debug(f"Saved screenshot to {image_path}")
                     
                     # Update message history with latest state
-                    # message_history = self._clear_images_from_history(message_history)
+                    message_history = self._clear_images_from_history(message_history)
                     execution_log = f"You are currently on the page : {task_page.url}\n" + execution_log  + "\n Please make sure to double check the element tag you are clicking on in the next image, cross check again and again and valdiate which element you are interacting with. Please do not mess up and select a wrong element index"
                     message_history = self._add_screenshot_message(
                         screenshot_base64,
@@ -162,6 +168,7 @@ class Voyager:
 
                     if should_stop or task_completed:
                         logger.info(f"Task {'completed' if task_completed else 'stopped'}")
+                        logger.info(f"Final URL : {task_page.url}")
                         break
 
                     # Wait for page stability before next iteration
@@ -239,6 +246,33 @@ class Voyager:
         
         raise RuntimeError("Unexpected: exited retry loop without return or raise")
 
+    async def _mimic_human_behavior(self, page: Page) -> None:
+        """Simulate human-like interaction with random mouse movements and scrolling."""
+        try:
+            viewport_size = page.viewport_size
+            if not viewport_size:
+                logger.warning("Could not get viewport size to mimic human behavior.")
+                return
+
+            width, height = viewport_size['width'], viewport_size['height']
+
+            # Random mouse movements
+            # for _ in range(random.randint(3, 7)):
+            #     random_x = random.randint(0, width - 1)
+            #     random_y = random.randint(0, height - 1)
+            #     await page.mouse.move(random_x, random_y, steps=random.randint(5, 10))
+            #     await asyncio.sleep(random.uniform(0.05, 0.15))
+
+            # Random scrolls
+            for _ in range(random.randint(1, 3)):
+                scroll_amount_y = random.randint(-200, 200)
+                scroll_amount_x = random.randint(-50, 50)
+                await page.mouse.wheel(delta_x=scroll_amount_x, delta_y=scroll_amount_y)
+                await asyncio.sleep(random.uniform(0.1, 0.3))
+
+        except Exception as e:
+            logger.warning(f"Could not mimic human behavior: {e}")
+
     async def _execute_actions(
         self,
         actions: List[VoyagerAction],
@@ -258,7 +292,13 @@ class Voyager:
             logger.info(f"Executing action {i}/{len(actions)}: {action.type}")
             logger.debug(action.model_dump())
 
+            if self.mimic_human_behaviour:
+                await self._mimic_human_behavior(page)
+
             action_resp = await safe_execute_action(action, page)
+
+            if self.mimic_human_behaviour:
+                await self._mimic_human_behavior(page)
 
             # Wait for stability after action
             await page.wait_for_load_state("domcontentloaded")
@@ -293,39 +333,48 @@ class Voyager:
 
         return should_stop, task_completed, execution_log
 
-    @staticmethod
     def _clear_images_from_history(
+        self,
         message_history: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
         """
-        Replace image_url entries with placeholder text to manage context size.
+        Replace image_url entries with placeholder text to manage context size,
+        keeping the last `max_images_to_include` images.
         
         Args:
             message_history: List of OpenAI-style messages
             
         Returns:
-            Cleaned message history with images replaced by placeholders
+            Cleaned message history with old images replaced by placeholders.
         """
+        # Find indices of messages containing images
+        image_message_indices = []
+        for i, message in enumerate(message_history):
+            if "content" in message and isinstance(message["content"], list):
+                if any(part.get("type") == "image_url" for part in message["content"]):
+                    image_message_indices.append(i)
+
+        # Determine which images to replace
+        images_to_replace_indices = set(image_message_indices[:-self.max_images_to_include])
+
+        if not images_to_replace_indices:
+            return message_history
+
+        # Create a new list with old images replaced
         cleaned_messages = []
-
-        for message in message_history:
-            if "content" not in message:
-                continue
-
-            content = message["content"]
-
-            if isinstance(content, list):
+        for i, message in enumerate(message_history):
+            if i in images_to_replace_indices:
                 new_content = [
                     {"type": "text", "text": "[Placeholder: image already processed]"}
-                    if isinstance(part, dict) and part.get("type") == "image_url"
+                    if part.get("type") == "image_url"
                     else part
-                    for part in content
+                    for part in message["content"]
                 ]
                 cleaned_messages.append({
                     "role": message["role"],
                     "content": new_content
                 })
-            elif isinstance(content, str):
+            else:
                 cleaned_messages.append(message)
 
         return cleaned_messages

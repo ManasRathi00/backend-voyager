@@ -6,6 +6,8 @@ from .scroll import execute_scroll
 from .success import execute_success
 from .type import execute_type
 from .wait import execute_wait
+from .hover import execute_hover
+from .go_to import execute_go_to
 from ..types import VoyagerAction, StepExecution, EndExecution
 from playwright.async_api import Page
 from typing import List, Dict
@@ -29,7 +31,9 @@ async def safe_execute_action(action : VoyagerAction, page : Page) -> StepExecut
     """
     action_map = {
         "click" : execute_click,
+        "hover" : execute_hover,
         "extract_data" : execute_extract_data,
+        "go_to" : execute_go_to,
         "go_back" : execute_go_back,
         "google" : execute_google,
         "scroll" : execute_scroll,

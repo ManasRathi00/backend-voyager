@@ -24,8 +24,6 @@
           element.tagName === "SELECT" ||
           element.tagName === "BUTTON" ||
           element.tagName === "A" ||
-          element.onclick != null ||
-          window.getComputedStyle(element).cursor === "pointer" ||
           element.tagName === "IFRAME" ||
           element.tagName === "VIDEO" ||
           (element.hasAttribute("role") &&

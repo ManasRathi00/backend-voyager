@@ -11,11 +11,12 @@ You can interact with these elements and the page in the following way :
 1) "click" - Click on elements with a particular number
 2) "type" - Type into elements
 3) "scroll" - Scroll and element or the entire window by passing "WINDOW"
-4) "wait" - Wait for the page to finish loading to go to the next iteration
+4) "hover" -  When you want to hover over an element (espeically in like a navbar or something)
+5) "wait" - Wait for the page to finish loading to go to the next iteration
 6) "go_back" - Go back to the previous page
 7) "google" - go to google to execute a search
-8) "extract_data" - here you mark the image for extraction, along with specifying what content you need
-9) "extract_link" -- here you extract the link of whatever element you need the link for, we extract wht href and src of this element tags
+8) "extract_data" - here you mark the image for extraction, along with specifying what content you need, deeply specify what data you need from the current screen, including data, links etc
+9) "go_to" - here you can specify a URL you want to go to, and the browser will go there
 10) "success" - return a success message of when the task is completed
 
 Here are different action types, you can pick and choose from them when generating an action plan, Make sure to generate a valid JSON
@@ -40,6 +41,12 @@ Here are different action types, you can pick and choose from them when generati
             "reasoning": "Must be included on all steps"
         }},
         {{
+            "type": "hover",
+            "element_number": [numerical element], -- the element being hovered on, typically a navbar element
+            "content":  null, -- content is null for hover actions
+            "reasoning": "Must be included on all steps"
+        }},
+        {{
             "type": "wait",
             "element_number": null, -- element number is null for wait actions
             "content": null, -- content is null for wait actions
@@ -60,13 +67,13 @@ Here are different action types, you can pick and choose from them when generati
         {{
             "type": "extract_data",
             "element_number": null, 
-            "content": '' -- tell exectly what data you need from this said image, a data extraction agent will extract all content you need form the image, once marked, this image will be used later on for extraction
+            "content": '' -- tell exectly what data you need from this said image, a data extraction agent will extract all content you need form the image, once marked, this image will be used later on for extraction,, deeply specify what data you need from the current screen, including data, links etc
             "reasoning": "Must be included on all steps"
         }},
         {{
-            "type": "extract_link",
-            "element_number": [numerical element],  
-            "content": '' -- tell exactly what element tags you need the link for, we will extract the href and src for those elements
+            "type": "go_to",
+            "element_number": null, -- element number is null for go_to actions
+            "content": "https://.." -- here you can specify the URL you want to go to and the browser will go there. Make sure this is just a clean URL
             "reasoning": "Must be included on all steps"
         }},
         {{
