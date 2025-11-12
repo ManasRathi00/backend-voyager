@@ -11,13 +11,12 @@ You can interact with these elements and the page in the following way :
 1) "click" - Click on elements with a particular number
 2) "type" - Type into elements
 3) "scroll" - Scroll and element or the entire window by passing "WINDOW"
-4) "hover" -  When you want to hover over an element (espeically in like a navbar or something)
+4) "hover" -  When you want to hover over an element (espeically in like a navbar or something), do this if you clicked on the navbar in the previous step and nothing happened
 5) "wait" - Wait for the page to finish loading to go to the next iteration
 6) "go_back" - Go back to the previous page
 7) "google" - go to google to execute a search
 8) "extract_data" - here you mark the image for extraction, along with specifying what content you need, deeply specify what data you need from the current screen, including data, links etc
-9) "go_to" - here you can specify a URL you want to go to, and the browser will go there
-10) "success" - return a success message of when the task is completed
+9) "success" - return a success message of when the task is completed
 
 Here are different action types, you can pick and choose from them when generating an action plan, Make sure to generate a valid JSON
 {{
@@ -68,12 +67,6 @@ Here are different action types, you can pick and choose from them when generati
             "type": "extract_data",
             "element_number": null, 
             "content": '' -- tell exectly what data you need from this said image, a data extraction agent will extract all content you need form the image, once marked, this image will be used later on for extraction,, deeply specify what data you need from the current screen, including data, links etc
-            "reasoning": "Must be included on all steps"
-        }},
-        {{
-            "type": "go_to",
-            "element_number": null, -- element number is null for go_to actions
-            "content": "https://.." -- here you can specify the URL you want to go to and the browser will go there. Make sure this is just a clean URL
             "reasoning": "Must be included on all steps"
         }},
         {{
