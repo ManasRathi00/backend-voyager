@@ -23,12 +23,16 @@ class VoyagerStep(BaseModel):
     image_base_64 : Optional[str] = None
     actions : List[VoyagerAction]
     
+class VoyagerResult(BaseModel):
+    success: bool
+    final_url: Optional[str] = None
+    final_message : Optional[str] = None
     
 class VoyagerTask(BaseModel):
     start_url : str
     prompt : str
     max_iterations : int = 100
-    callback:  Optional[Callable[[VoyagerStep], Awaitable[None]]] = None
+    callback:  Optional[Callable[[VoyagerResult], Awaitable[None]]] = None # Updated callback signature
     
     
     

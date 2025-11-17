@@ -13,8 +13,9 @@ from playwright.async_api import BrowserContext, Page
 from config.logger import logger
 from config.settings import settings
 from utils import json_parser
+
 from .prompts.system_prompt import SYSTEM_PROMPT
-from .types import VoyagerTask, VoyagerStep, VoyagerAction
+from .types import VoyagerTask, VoyagerStep, VoyagerAction, VoyagerResult
 from .actions import safe_execute_action
 
 
@@ -70,16 +71,22 @@ class Voyager:
         self,
         browser_context: BrowserContext,
         task: VoyagerTask
-    ) -> None:
+    ) -> VoyagerResult:
         """
         Execute a browser automation task with AI-driven decision making.
         
         Args:
             browser_context: Playwright browser context for the task
             task: VoyagerTask containing prompt, URL, and configuration
+        
+        Returns:
+            VoyagerResult: The result of the task execution.
         """
         async with self.concurrency_semaphore:
             task_page = None
+            success_status = False
+            final_url: Optional[str] = None
+            final_message: str = "Task did not complete."
             try:
                 logger.info(f"Starting task: '{task.prompt}' at {task.start_url}")
                 task_page = await browser_context.new_page()
@@ -120,7 +127,8 @@ class Voyager:
                         max_retries=3,
                         retry_delay=0.5
                     )
-
+                    if self.mimic_human_behaviour:
+                        await self._mimic_human_behavior(task_page)
                     if self.save_images_for_debugging and screenshots_dir:
                         image_path = screenshots_dir / f"image_{iteration}.png"
                         with open(image_path, "wb") as f:
@@ -149,6 +157,7 @@ class Voyager:
                         logger.info(f"AI returned {len(actions)} action(s)")
                     except Exception as e:
                         logger.error(f"AI call failed: {e}")
+                        final_message = f"AI decision failed: {e}"
                         break
 
                     message_history.append({"role": "assistant", "content": raw_response})
@@ -168,7 +177,14 @@ class Voyager:
 
                     if should_stop or task_completed:
                         logger.info(f"Task {'completed' if task_completed else 'stopped'}")
-                        logger.info(f"Final URL : {task_page.url}")
+                        final_url = task_page.url
+                        logger.info(f"Final URL : {final_url}")
+                        if task_completed:
+                            success_status = True
+                            final_message = f"Task completed successfully at {final_url}. Log: {execution_log}"
+                        else:
+                            success_status = False
+                            final_message = f"Task stopped at {final_url}. Reason: {execution_log}"
                         break
 
                     # Wait for page stability before next iteration
@@ -177,16 +193,25 @@ class Voyager:
                     await asyncio.sleep(1)
                     await task_page.evaluate(self.clear_element_tags_script)
 
-                if iteration >= task.max_iterations:
-                    logger.warning(f"Task reached max iterations ({task.max_iterations})")
+                if iteration >= task.max_iterations and not task_completed:
+                    logger.warning(f"Task reached max iterations ({task.max_iterations}) without completion")
+                    success_status = False
+                    final_message = f"Task reached max iterations ({task.max_iterations}) without completion."
 
             except Exception as e:
                 logger.error(f"Task execution failed: {e}", exc_info=True)
-                raise
+                success_status = False
+                final_message = f"Task execution failed due to an unexpected error: {e}"
             finally:
                 if task_page and not task_page.is_closed():
                     logger.info(f"Closing page for task: '{task.prompt}'")
                     await task_page.close()
+                
+                return VoyagerResult(
+                    final_url=final_url,
+                    success=success_status,
+                    final_message=final_message
+                )
 
     async def _capture_annotated_screenshot(
         self, 
@@ -292,18 +317,9 @@ class Voyager:
             logger.info(f"Executing action {i}/{len(actions)}: {action.type}")
             logger.debug(action.model_dump())
 
-            if self.mimic_human_behaviour:
-                await self._mimic_human_behavior(page)
-
             action_resp = await safe_execute_action(action, page)
 
-            if self.mimic_human_behaviour:
-                await self._mimic_human_behavior(page)
-
             # Wait for stability after action
-            await page.wait_for_load_state("domcontentloaded")
-            await asyncio.sleep(0.5)
-
             if action_resp.success:
                 logger.info(f"Action {action.type} succeeded: {action_resp.success.content}")
                 execution_log += f"\n✓ Task completed successfully: {action_resp.success.content}"

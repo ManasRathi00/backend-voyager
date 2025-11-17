@@ -1,6 +1,6 @@
 (function () {
   const MAX_ELEMENTS = 60;
-  const MIN_AREA = 20;
+  const MIN_AREA = 0;
   const LABEL_FONT_SIZE = 16;
   const LABEL_PADDING = 3;
 
@@ -26,6 +26,7 @@
           element.tagName === "A" ||
           element.tagName === "IFRAME" ||
           element.tagName === "VIDEO" ||
+          getComputedStyle(element).cursor == "pointer" ||
           (element.hasAttribute("role") &&
             ["button", "link", "checkbox", "menuitem", "tab"].includes(
               element.getAttribute("role")

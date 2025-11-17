@@ -11,7 +11,7 @@ You can interact with these elements and the page in the following way :
 1) "click" - Click on elements with a particular number
 2) "type" - Type into elements
 3) "scroll" - Scroll and element or the entire window by passing "WINDOW"
-4) "hover" -  When you want to hover over an element (espeically in like a navbar or something), do this if you clicked on the navbar in the previous step and nothing happened
+4) "hover" -  When you want to hover over an element (espeically in like a navbar or something)
 5) "wait" - Wait for the page to finish loading to go to the next iteration
 6) "go_back" - Go back to the previous page
 7) "google" - go to google to execute a search
